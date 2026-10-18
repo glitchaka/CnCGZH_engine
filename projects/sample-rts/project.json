@@ -1,0 +1,12 @@
+{
+  "format": "cncgzh-project",
+  "version": 1,
+  "name": "Sample RTS",
+  "description": "Minimal engine-neutral project used to exercise the block editor and legacy adapter.",
+  "map": "maps/sample-flat",
+  "assetRoots": [
+    "../../assets/sample",
+    "../../assets/ea-source-samples"
+  ],
+  "scripts": ["logic/main.blocks.json"]
+}
