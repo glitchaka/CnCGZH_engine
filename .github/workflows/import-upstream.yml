@@ -1,0 +1,43 @@
+name: Import EA upstream
+
+on:
+  push:
+    paths:
+      - '.github/workflows/import-upstream.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  import:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout destination
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Clone EA source release
+        run: |
+          rm -rf .upstream-tmp
+          git clone --depth 1 https://github.com/electronicarts/CnC_Generals_Zero_Hour.git .upstream-tmp
+
+      - name: Import source baseline
+        run: |
+          mkdir -p upstream/ea-generals-zero-hour
+          rsync -a --delete --exclude='.git' .upstream-tmp/ upstream/ea-generals-zero-hour/
+          rm -rf .upstream-tmp
+
+      - name: Commit imported baseline
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add upstream/ea-generals-zero-hour
+          if git diff --cached --quiet; then
+            echo 'Upstream baseline already current.'
+            exit 0
+          fi
+          git commit -m 'Import EA Generals Zero Hour source baseline'
+          git push
