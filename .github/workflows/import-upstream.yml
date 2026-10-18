@@ -30,14 +30,18 @@ jobs:
           rsync -a --delete --exclude='.git' .upstream-tmp/ upstream/ea-generals-zero-hour/
           rm -rf .upstream-tmp
 
-      - name: Commit imported baseline
+      - name: Collect source-release sample resources
+        run: |
+          python3 tools/extract_sample_assets.py
+
+      - name: Commit imported baseline and samples
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add upstream/ea-generals-zero-hour
+          git add upstream/ea-generals-zero-hour assets/ea-source-samples
           if git diff --cached --quiet; then
-            echo 'Upstream baseline already current.'
+            echo 'Upstream baseline and sample resources already current.'
             exit 0
           fi
-          git commit -m 'Import EA Generals Zero Hour source baseline'
+          git commit -m 'Refresh EA source baseline and sample resources'
           git push
