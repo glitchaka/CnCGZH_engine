@@ -1,7 +1,9 @@
 #include <windows.h>
+#include <windowsx.h>
 #include <commdlg.h>
 #include <algorithm>
 #include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -34,11 +36,11 @@ COLORREF kBlockColors[] = {
     RGB(220, 125, 55)
 };
 
-constexpr int kPaletteWidth = 230;
-constexpr int kInspectorWidth = 260;
-constexpr int kToolbarHeight = 48;
-constexpr int kBlockW = 190;
-constexpr int kBlockH = 42;
+constexpr LONG kPaletteWidth = 230;
+constexpr LONG kInspectorWidth = 260;
+constexpr LONG kToolbarHeight = 48;
+constexpr LONG kBlockW = 190;
+constexpr LONG kBlockH = 42;
 
 std::vector<BlockView> gBlocks;
 int gSelected = -1;
@@ -47,7 +49,7 @@ POINT gDragOffset{};
 bool gDirty = false;
 
 RECT paletteBlockRect(int index) {
-    int y = kToolbarHeight + 22 + index * 54;
+    LONG y = kToolbarHeight + 22 + index * 54;
     return {18, y, kPaletteWidth - 18, y + kBlockH};
 }
 
@@ -75,7 +77,7 @@ void drawRoundedBlock(HDC dc, const RECT& r, COLORREF color, const wchar_t* labe
     DrawTextW(dc, label, -1, &text, DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_END_ELLIPSIS);
 }
 
-void drawToolbar(HDC dc, int width) {
+void drawToolbar(HDC dc, LONG width) {
     RECT r{0,0,width,kToolbarHeight};
     fillRect(dc, r, RGB(32,33,36));
     SetBkMode(dc, TRANSPARENT);
@@ -174,10 +176,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (gDragging >= 0 && (wParam & MK_LBUTTON)) {
                 RECT client{};
                 GetClientRect(hwnd, &client);
-                int x = std::max(kPaletteWidth + 12, GET_X_LPARAM(lParam) - gDragOffset.x);
-                int y = std::max(kToolbarHeight + 8, GET_Y_LPARAM(lParam) - gDragOffset.y);
-                x = std::min(x, client.right - kInspectorWidth - kBlockW - 12);
-                y = std::min(y, client.bottom - kBlockH - 8);
+                LONG x = std::max<LONG>(kPaletteWidth + 12, GET_X_LPARAM(lParam) - gDragOffset.x);
+                LONG y = std::max<LONG>(kToolbarHeight + 8, GET_Y_LPARAM(lParam) - gDragOffset.y);
+                x = std::min<LONG>(x, client.right - kInspectorWidth - kBlockW - 12);
+                y = std::min<LONG>(y, client.bottom - kBlockH - 8);
                 gBlocks[gDragging].rect = {x,y,x+kBlockW,y+kBlockH};
                 gDirty = true;
                 InvalidateRect(hwnd, nullptr, FALSE);
@@ -247,10 +249,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             RECT canvas{kPaletteWidth,kToolbarHeight,client.right-kInspectorWidth,client.bottom};
             HPEN gridPen = CreatePen(PS_SOLID, 1, RGB(34,35,39));
             HGDIOBJ oldPen = SelectObject(dc, gridPen);
-            for (int x = canvas.left; x < canvas.right; x += 24) {
+            for (LONG x = canvas.left; x < canvas.right; x += 24) {
                 MoveToEx(dc, x, canvas.top, nullptr); LineTo(dc, x, canvas.bottom);
             }
-            for (int y = canvas.top; y < canvas.bottom; y += 24) {
+            for (LONG y = canvas.top; y < canvas.bottom; y += 24) {
                 MoveToEx(dc, canvas.left, y, nullptr); LineTo(dc, canvas.right, y);
             }
             SelectObject(dc, oldPen);
