@@ -1,10 +1,11 @@
-name: Build Studio
+name: Build Engine
 
 on:
   push:
     paths:
       - 'CMakeLists.txt'
       - 'engine/**'
+      - 'runtime/**'
       - 'studio/**'
       - '.github/workflows/build-studio.yml'
   workflow_dispatch:
@@ -19,5 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Configure
         run: cmake -S . -B build -A x64
-      - name: Build
+      - name: Build engine
+        run: cmake --build build --config Release --target CnCGZHEngine
+      - name: Build studio
         run: cmake --build build --config Release --target CnCGZHStudio
