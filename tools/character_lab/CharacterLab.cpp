@@ -82,11 +82,9 @@ void unloadSets(std::vector<AnimationSet>& sets){for(auto&s:sets)if(s.animations
 
 void loadAnimations(const CharacterEntry& c,Model model,std::vector<AnimationSet>& sets,std::vector<AnimationRef>& refs){
     unloadSets(sets);refs.clear();
-    fs::path dir=c.packRoot/"Animations"/"gltf"/c.rig;
-    if(!fs::exists(dir)){
-        dir=c.packRoot/"Animations"/"gltf"/"Rig_Medium";
-        if(!fs::exists(dir))return;
-    }
+    fs::path animationRoot=c.packRoot.parent_path()/"character-animations-1.1";
+    fs::path dir=animationRoot/"Animations"/"gltf"/c.rig;
+    if(!fs::exists(dir))return;
     std::vector<fs::path> files;for(auto&e:fs::directory_iterator(dir))if(e.is_regular_file()&&e.path().extension()==L".glb")files.push_back(e.path());
     std::sort(files.begin(),files.end());
     for(auto&f:files){int count=0;std::string p=utf8(f);ModelAnimation*a=LoadModelAnimations(p.c_str(),&count);if(!a||count<=0)continue;int si=(int)sets.size();sets.push_back({a,count});for(int i=0;i<count;++i)if(IsModelAnimationValid(model,a[i]))refs.push_back({si,i,a[i].name[0]?a[i].name:(f.stem().string()+" #"+std::to_string(i+1))});}
