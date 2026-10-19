@@ -14,13 +14,13 @@ if(WIN32)
     add_executable(CnCGZHEngine WIN32
         runtime/src/main.cpp
     )
-    target_link_libraries(CnCGZHEngine PRIVATE cncgzh_engine_core user32 gdi32)
+    target_link_libraries(CnCGZHEngine PRIVATE cncgzh_engine_core user32 gdi32 shell32 opengl32)
     target_compile_definitions(CnCGZHEngine PRIVATE UNICODE _UNICODE NOMINMAX)
 
     add_executable(CnCGZHStudio WIN32
         studio/src/main.cpp
     )
-    target_link_libraries(CnCGZHStudio PRIVATE cncgzh_engine_core user32 gdi32 comdlg32)
+    target_link_libraries(CnCGZHStudio PRIVATE cncgzh_engine_core user32 gdi32 comdlg32 shell32)
     target_compile_definitions(CnCGZHStudio PRIVATE UNICODE _UNICODE NOMINMAX)
 endif()
 
