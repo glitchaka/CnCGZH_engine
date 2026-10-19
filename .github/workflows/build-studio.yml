@@ -28,3 +28,5 @@ jobs:
         run: cmake --build build --config Release --target CnCGZHStudio
       - name: Build character lab
         run: cmake --build build --config Release --target CnCGZHCharacterLab
+
+# Verifies the Spanish Studio UI and integrated character/animation tool on Windows.
