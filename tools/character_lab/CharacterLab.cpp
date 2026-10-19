@@ -1,9 +1,11 @@
 #include <windows.h>
 #include <shellapi.h>
 #include "raylib.h"
+#include "raymath.h"
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <map>
@@ -80,14 +82,81 @@ bool saveProfile(const fs::path& root,const CharacterEntry& c,const std::map<std
 
 void unloadSets(std::vector<AnimationSet>& sets){for(auto&s:sets)if(s.animations)UnloadModelAnimations(s.animations,s.count);sets.clear();}
 
-void loadAnimations(const CharacterEntry& c,Model model,std::vector<AnimationSet>& sets,std::vector<AnimationRef>& refs){
-    unloadSets(sets);refs.clear();
-    fs::path animationRoot=c.packRoot.parent_path()/"character-animations-1.1";
-    fs::path dir=animationRoot/"Animations"/"gltf"/c.rig;
+int findBone(const BoneInfo* bones,int count,const char* name){
+    if(!bones||!name)return -1;
+    for(int i=0;i<count;++i)if(std::strncmp(bones[i].name,name,sizeof(bones[i].name))==0)return i;
+    return -1;
+}
+
+float safeRatio(float value,float base){return std::fabs(base)>0.00001f?value/base:1.0f;}
+
+Transform retargetTransform(const Transform& sourcePose,const Transform& sourceBind,const Transform& targetBind){
+    Transform out=targetBind;
+    Quaternion sourceBindInv=QuaternionInvert(sourceBind.rotation);
+    Quaternion deltaRotation=QuaternionMultiply(sourcePose.rotation,sourceBindInv);
+    out.rotation=QuaternionNormalize(QuaternionMultiply(deltaRotation,targetBind.rotation));
+    Vector3 deltaTranslation=Vector3Subtract(sourcePose.translation,sourceBind.translation);
+    out.translation=Vector3Add(targetBind.translation,deltaTranslation);
+    out.scale={
+        targetBind.scale.x*safeRatio(sourcePose.scale.x,sourceBind.scale.x),
+        targetBind.scale.y*safeRatio(sourcePose.scale.y,sourceBind.scale.y),
+        targetBind.scale.z*safeRatio(sourcePose.scale.z,sourceBind.scale.z)
+    };
+    return out;
+}
+
+bool retargetAnimationToModel(ModelAnimation& anim,const Model& sourceRig,const Model& targetModel){
+    if(!anim.framePoses||anim.frameCount<=0||anim.boneCount<=0||!anim.bones)return false;
+    if(sourceRig.boneCount<=0||!sourceRig.bones||!sourceRig.bindPose)return false;
+    if(targetModel.boneCount<=0||!targetModel.bones||!targetModel.bindPose)return false;
+    if(anim.boneCount!=targetModel.boneCount)return false;
+
+    struct BoneMap { int anim=-1; int source=-1; };
+    std::vector<BoneMap> map(targetModel.boneCount);
+    for(int t=0;t<targetModel.boneCount;++t){
+        map[t].anim=findBone(anim.bones,anim.boneCount,targetModel.bones[t].name);
+        map[t].source=findBone(sourceRig.bones,sourceRig.boneCount,targetModel.bones[t].name);
+        if(map[t].anim<0||map[t].source<0)return false;
+    }
+
+    std::vector<Transform> sourceFrame(anim.boneCount);
+    for(int frame=0;frame<anim.frameCount;++frame){
+        for(int i=0;i<anim.boneCount;++i)sourceFrame[i]=anim.framePoses[frame][i];
+        for(int t=0;t<targetModel.boneCount;++t){
+            int ai=map[t].anim;
+            int si=map[t].source;
+            anim.framePoses[frame][t]=retargetTransform(sourceFrame[ai],sourceRig.bindPose[si],targetModel.bindPose[t]);
+        }
+    }
+    for(int t=0;t<targetModel.boneCount;++t)anim.bones[t]=targetModel.bones[t];
+    return true;
+}
+
+void loadAnimations(const fs::path& root,const CharacterEntry& c,Model model,std::vector<AnimationSet>& sets,std::vector<AnimationRef>& refs,int& retargetedCount){
+    unloadSets(sets);refs.clear();retargetedCount=0;
+    fs::path animationPack=root/"assets"/"sample"/"kaykit-characters"/"character-animations-1.1";
+    fs::path dir=animationPack/"Animations"/"gltf"/c.rig;
     if(!fs::exists(dir))return;
-    std::vector<fs::path> files;for(auto&e:fs::directory_iterator(dir))if(e.is_regular_file()&&e.path().extension()==L".glb")files.push_back(e.path());
+
+    std::vector<fs::path> files;
+    for(auto&e:fs::directory_iterator(dir))if(e.is_regular_file()&&e.path().extension()==L".glb")files.push_back(e.path());
     std::sort(files.begin(),files.end());
-    for(auto&f:files){int count=0;std::string p=utf8(f);ModelAnimation*a=LoadModelAnimations(p.c_str(),&count);if(!a||count<=0)continue;int si=(int)sets.size();sets.push_back({a,count});for(int i=0;i<count;++i)if(IsModelAnimationValid(model,a[i]))refs.push_back({si,i,a[i].name[0]?a[i].name:(f.stem().string()+" #"+std::to_string(i+1))});}
+
+    for(auto&f:files){
+        std::string p=utf8(f);
+        Model sourceRig=LoadModel(p.c_str());
+        int count=0;
+        ModelAnimation* a=LoadModelAnimations(p.c_str(),&count);
+        if(!a||count<=0){if(sourceRig.meshCount>0||sourceRig.boneCount>0)UnloadModel(sourceRig);continue;}
+        int si=(int)sets.size();
+        sets.push_back({a,count});
+        for(int i=0;i<count;++i){
+            if(!IsModelAnimationValid(model,a[i]))continue;
+            if(retargetAnimationToModel(a[i],sourceRig,model))++retargetedCount;
+            refs.push_back({si,i,a[i].name[0]?a[i].name:(f.stem().string()+" #"+std::to_string(i+1))});
+        }
+        if(sourceRig.meshCount>0||sourceRig.boneCount>0)UnloadModel(sourceRig);
+    }
 }
 
 ModelAnimation* currentAnimation(std::vector<AnimationSet>& sets,const std::vector<AnimationRef>& refs,int i){
@@ -118,18 +187,18 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
     int charIndex=0,animIndex=0,actionIndex=0,charScroll=0,animScroll=0;float frame=0,speed=1,yaw=35,pitch=18,distance=5;bool playing=true,loop=true,orbit=false;Vector2 last{};
     const std::vector<std::string> actions={"Idle","Move","Run","Attack","Interact","PickUp","UseItem","Hit","Death","Spawn"};
     const std::vector<std::string> actionLabels={"Reposo","Mover","Correr","Atacar","Interactuar","Recoger","Usar objeto","Recibir golpe","Morir","Aparecer"};
-    Model model{};bool modelLoaded=false;std::vector<AnimationSet>sets;std::vector<AnimationRef>refs;std::map<std::string,std::string>mapping;std::string status="Listo";
+    Model model{};bool modelLoaded=false;std::vector<AnimationSet>sets;std::vector<AnimationRef>refs;std::map<std::string,std::string>mapping;std::string status="Listo";int retargetedCount=0;
 
     auto loadCharacter=[&](){
         if(modelLoaded)UnloadModel(model);unloadSets(sets);refs.clear();std::string p=utf8(chars[charIndex].model);model=LoadModel(p.c_str());modelLoaded=model.meshCount>0;
-        if(modelLoaded)loadAnimations(chars[charIndex],model,sets,refs);mapping=loadProfile(root,chars[charIndex]);animIndex=0;frame=0;playing=true;animScroll=0;
-        status=modelLoaded?std::to_string(refs.size())+" animaciones cargadas · "+chars[charIndex].rig:"No se pudo cargar el modelo";
+        if(modelLoaded)loadAnimations(root,chars[charIndex],model,sets,refs,retargetedCount);mapping=loadProfile(root,chars[charIndex]);animIndex=0;frame=0;playing=true;animScroll=0;
+        status=modelLoaded?std::to_string(refs.size())+" animaciones · "+std::to_string(retargetedCount)+" retargeteadas · "+chars[charIndex].rig:"No se pudo cargar el modelo";
     };loadCharacter();
 
     while(!WindowShouldClose()){
         int w=GetScreenWidth(),h=GetScreenHeight();float left=250,right=350,top=58,bottom=34;Rectangle view{left,top,(float)w-left-right,(float)h-top-bottom};Vector2 mouse=GetMousePosition();
         if(CheckCollisionPointRec(mouse,view)){float wh=GetMouseWheelMove();if(wh)distance=std::clamp(distance-wh*.4f,1.5f,15.0f);if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){orbit=true;last=mouse;}if(orbit&&IsMouseButtonDown(MOUSE_BUTTON_RIGHT)){yaw-=(mouse.x-last.x)*.35f;pitch=std::clamp(pitch+(mouse.y-last.y)*.3f,-8.0f,75.0f);last=mouse;}if(IsMouseButtonReleased(MOUSE_BUTTON_RIGHT))orbit=false;}
-        if(playing&&modelLoaded){if(auto*a=currentAnimation(sets,refs,animIndex)){frame+=GetFrameTime()*30.0f*speed;if(a->keyframeCount>0&&frame>=a->keyframeCount)frame=loop?std::fmod(frame,(float)a->keyframeCount):(float)a->keyframeCount-1;UpdateModelAnimation(model,*a,frame);}}
+        if(playing&&modelLoaded){if(auto*a=currentAnimation(sets,refs,animIndex)){frame+=GetFrameTime()*30.0f*speed;if(a->frameCount>0&&frame>=a->frameCount)frame=loop?std::fmod(frame,(float)a->frameCount):(float)a->frameCount-1;UpdateModelAnimation(model,*a,(int)frame);}}
 
         BeginDrawing();ClearBackground(Color{20,22,26,255});DrawRectangle(0,0,w,(int)top,Color{28,30,35,255});DrawText("CnCGZH Laboratorio de personajes",16,17,22,RAYWHITE);
         Rectangle bp{left+16,12,86,34},bprev{left+110,12,40,34},bnext{left+156,12,40,34},bminus{left+206,12,40,34},bplus{left+252,12,40,34},bloop{left+300,12,72,34};
@@ -150,7 +219,7 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
         Rectangle assign{(float)rx,(float)(actionY+(int)actions.size()*26+8),right-24,32};button(assign,"Asignar animación actual");if(click(assign)&&!refs.empty()){mapping[actions[actionIndex]]=refs[animIndex].name;status=saveProfile(root,chars[charIndex],mapping)?actions[actionIndex]+" = "+refs[animIndex].name:"No se pudo guardar el perfil";}
 
         BeginScissorMode((int)view.x,(int)view.y,(int)view.width,(int)view.height);BeginMode3D(cameraFor(yaw,pitch,distance));DrawGrid(20,1.0f);if(modelLoaded)DrawModel(model,{0,0,0},1.0f,WHITE);EndMode3D();EndScissorMode();DrawRectangleLinesEx(view,1,Color{74,80,89,255});
-        if(!refs.empty()){DrawText(refs[animIndex].name.c_str(),(int)view.x+14,(int)view.y+14,20,RAYWHITE);if(auto*a=currentAnimation(sets,refs,animIndex))DrawText(TextFormat("Fotograma %.1f / %d",frame,a->keyframeCount),(int)view.x+14,(int)view.y+41,15,Color{190,196,205,255});}
+        if(!refs.empty()){DrawText(refs[animIndex].name.c_str(),(int)view.x+14,(int)view.y+14,20,RAYWHITE);if(auto*a=currentAnimation(sets,refs,animIndex))DrawText(TextFormat("Fotograma %.1f / %d",frame,a->frameCount),(int)view.x+14,(int)view.y+41,15,Color{190,196,205,255});}
         DrawText("Botón derecho: orbitar | Rueda: zoom",(int)view.x+14,(int)(view.y+view.height-26),15,Color{170,177,187,255});
 
         DrawRectangle(0,h-(int)bottom,w,(int)bottom,Color{27,29,33,255});DrawText(status.c_str(),12,h-23,14,Color{205,211,220,255});DrawText(("Perfil: "+utf8(profilePath(root,chars[charIndex]))).c_str(),w-600,h-23,13,Color{145,152,162,255});EndDrawing();
