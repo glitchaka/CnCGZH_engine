@@ -14,7 +14,7 @@ namespace fs = std::filesystem;
 
 namespace {
 
-struct CharacterEntry { std::string name; fs::path model; fs::path packRoot; };
+struct CharacterEntry { std::string name; fs::path model; fs::path packRoot; std::string rig; };
 struct AnimationSet { ModelAnimation* animations{}; int count{}; };
 struct AnimationRef { int set{}; int index{}; std::string name; };
 
@@ -55,7 +55,9 @@ std::vector<CharacterEntry> scanCharacters(const fs::path& root) {
             if(!it->is_regular_file(ec)||it->path().extension()!=L".glb")continue;
             std::string s=it->path().generic_string();
             if(s.find("/Characters/gltf/")==std::string::npos&&s.find("/characters/gltf/")==std::string::npos)continue;
-            out.push_back({it->path().stem().string(),it->path(),pack});
+            std::string name=it->path().stem().string();
+            std::string rig=(name.size()>=6 && name.rfind("_Large")==name.size()-6)?"Rig_Large":"Rig_Medium";
+            out.push_back({name,it->path(),pack,rig});
         }
     }
     std::sort(out.begin(),out.end(),[](const auto&a,const auto&b){return a.name<b.name;});
@@ -80,7 +82,11 @@ void unloadSets(std::vector<AnimationSet>& sets){for(auto&s:sets)if(s.animations
 
 void loadAnimations(const CharacterEntry& c,Model model,std::vector<AnimationSet>& sets,std::vector<AnimationRef>& refs){
     unloadSets(sets);refs.clear();
-    fs::path dir=c.packRoot/"Animations"/"gltf"/"Rig_Medium";if(!fs::exists(dir))return;
+    fs::path dir=c.packRoot/"Animations"/"gltf"/c.rig;
+    if(!fs::exists(dir)){
+        dir=c.packRoot/"Animations"/"gltf"/"Rig_Medium";
+        if(!fs::exists(dir))return;
+    }
     std::vector<fs::path> files;for(auto&e:fs::directory_iterator(dir))if(e.is_regular_file()&&e.path().extension()==L".glb")files.push_back(e.path());
     std::sort(files.begin(),files.end());
     for(auto&f:files){int count=0;std::string p=utf8(f);ModelAnimation*a=LoadModelAnimations(p.c_str(),&count);if(!a||count<=0)continue;int si=(int)sets.size();sets.push_back({a,count});for(int i=0;i<count;++i)if(IsModelAnimationValid(model,a[i]))refs.push_back({si,i,a[i].name[0]?a[i].name:(f.stem().string()+" #"+std::to_string(i+1))});}
@@ -119,7 +125,7 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
     auto loadCharacter=[&](){
         if(modelLoaded)UnloadModel(model);unloadSets(sets);refs.clear();std::string p=utf8(chars[charIndex].model);model=LoadModel(p.c_str());modelLoaded=model.meshCount>0;
         if(modelLoaded)loadAnimations(chars[charIndex],model,sets,refs);mapping=loadProfile(root,chars[charIndex]);animIndex=0;frame=0;playing=true;animScroll=0;
-        status=modelLoaded?std::to_string(refs.size())+" animaciones cargadas":"No se pudo cargar el modelo";
+        status=modelLoaded?std::to_string(refs.size())+" animaciones cargadas · "+chars[charIndex].rig:"No se pudo cargar el modelo";
     };loadCharacter();
 
     while(!WindowShouldClose()){
