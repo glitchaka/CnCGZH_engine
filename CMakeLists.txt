@@ -30,7 +30,7 @@ if(WIN32)
     add_executable(CnCGZHStudio WIN32
         studio/src/main.cpp
     )
-    target_link_libraries(CnCGZHStudio PRIVATE cncgzh_engine_core user32 gdi32 comdlg32 shell32)
+    target_link_libraries(CnCGZHStudio PRIVATE cncgzh_engine_core user32 gdi32 comctl32 shell32 opengl32 glu32)
     target_compile_definitions(CnCGZHStudio PRIVATE UNICODE _UNICODE NOMINMAX)
     add_dependencies(CnCGZHStudio cncgzh_assets)
 endif()
