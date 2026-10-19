@@ -107,13 +107,13 @@ Camera3D cameraFor(float yaw,float pitch,float distance){
 
 int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
     fs::path root=findRoot();auto chars=scanCharacters(root);
-    if(chars.empty()){MessageBoxW(nullptr,L"KayKit Adventurers 2.0 and Skeletons 1.1 were not found. Build the project once to prepare the sample assets.",L"CnCGZH Character Lab",MB_ICONERROR);return 2;}
+    if(chars.empty()){MessageBoxW(nullptr,L"KayKit Adventurers 2.0 and Skeletons 1.1 were not found. Build the project once to prepare the sample assets.",L"CnCGZH Laboratorio de personajes",MB_ICONERROR);return 2;}
 
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT);InitWindow(1500,900,"CnCGZH Character Lab");SetTargetFPS(60);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT);InitWindow(1500,900,"CnCGZH Laboratorio de personajes");SetTargetFPS(60);
 
     int charIndex=0,animIndex=0,actionIndex=0,charScroll=0,animScroll=0;float frame=0,speed=1,yaw=35,pitch=18,distance=5;bool playing=true,loop=true,orbit=false;Vector2 last{};
     const std::vector<std::string> actions={"Idle","Move","Run","Attack","Interact","PickUp","UseItem","Hit","Death","Spawn"};
-    Model model{};bool modelLoaded=false;std::vector<AnimationSet>sets;std::vector<AnimationRef>refs;std::map<std::string,std::string>mapping;std::string status="Ready";
+    Model model{};bool modelLoaded=false;std::vector<AnimationSet>sets;std::vector<AnimationRef>refs;std::map<std::string,std::string>mapping;std::string status="Listo";
 
     auto loadCharacter=[&](){
         if(modelLoaded)UnloadModel(model);unloadSets(sets);refs.clear();std::string p=utf8(chars[charIndex].model);model=LoadModel(p.c_str());modelLoaded=model.meshCount>0;
@@ -126,21 +126,21 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
         if(CheckCollisionPointRec(mouse,view)){float wh=GetMouseWheelMove();if(wh)distance=std::clamp(distance-wh*.4f,1.5f,15.0f);if(IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)){orbit=true;last=mouse;}if(orbit&&IsMouseButtonDown(MOUSE_BUTTON_RIGHT)){yaw-=(mouse.x-last.x)*.35f;pitch=std::clamp(pitch+(mouse.y-last.y)*.3f,-8.0f,75.0f);last=mouse;}if(IsMouseButtonReleased(MOUSE_BUTTON_RIGHT))orbit=false;}
         if(playing&&modelLoaded){if(auto*a=currentAnimation(sets,refs,animIndex)){frame+=GetFrameTime()*30.0f*speed;if(a->keyframeCount>0&&frame>=a->keyframeCount)frame=loop?std::fmod(frame,(float)a->keyframeCount):(float)a->keyframeCount-1;UpdateModelAnimation(model,*a,frame);}}
 
-        BeginDrawing();ClearBackground(Color{20,22,26,255});DrawRectangle(0,0,w,(int)top,Color{28,30,35,255});DrawText("CnCGZH Character Lab",16,17,22,RAYWHITE);
+        BeginDrawing();ClearBackground(Color{20,22,26,255});DrawRectangle(0,0,w,(int)top,Color{28,30,35,255});DrawText("CnCGZH Laboratorio de personajes",16,17,22,RAYWHITE);
         Rectangle bp{left+16,12,86,34},bprev{left+110,12,40,34},bnext{left+156,12,40,34},bminus{left+206,12,40,34},bplus{left+252,12,40,34},bloop{left+300,12,72,34};
-        button(bp,playing?"Pause":"Play");button(bprev,"<");button(bnext,">");button(bminus,"-");button(bplus,"+");button(bloop,loop?"Loop":"Once",loop);
+        button(bp,playing?"Pausa":"Reproducir");button(bprev,"<");button(bnext,">");button(bminus,"-");button(bplus,"+");button(bloop,loop?"Bucle":"Once",loop);
         if(click(bp))playing=!playing;if(click(bprev)&&!refs.empty()){animIndex=(animIndex+(int)refs.size()-1)%(int)refs.size();frame=0;}if(click(bnext)&&!refs.empty()){animIndex=(animIndex+1)%(int)refs.size();frame=0;}if(click(bminus))speed=std::max(.1f,speed-.1f);if(click(bplus))speed=std::min(3.0f,speed+.1f);if(click(bloop))loop=!loop;
         DrawText(TextFormat("%.1fx",speed),(int)left+386,21,16,Color{205,211,220,255});
 
-        DrawRectangle(0,(int)top,(int)left,h-(int)top-(int)bottom,Color{31,33,38,255});DrawText("CHARACTERS",12,(int)top+12,16,Color{180,187,198,255});int cy=(int)top+40;int visible=std::max(1,(h-(int)top-(int)bottom-50)/30);
+        DrawRectangle(0,(int)top,(int)left,h-(int)top-(int)bottom,Color{31,33,38,255});DrawText("PERSONAJES",12,(int)top+12,16,Color{180,187,198,255});int cy=(int)top+40;int visible=std::max(1,(h-(int)top-(int)bottom-50)/30);
         if(CheckCollisionPointRec(mouse,{0,top,left,(float)h-top-bottom})){int wh=(int)GetMouseWheelMove();if(wh)charScroll=std::clamp(charScroll-wh,0,std::max(0,(int)chars.size()-visible));}
         for(int row=0;row<visible&&row+charScroll<(int)chars.size();++row){int idx=row+charScroll;Rectangle r{8,(float)(cy+row*30),left-16,26};DrawRectangleRec(r,idx==charIndex?Color{61,107,151,255}:Color{42,45,51,255});DrawText(chars[idx].name.c_str(),14,(int)r.y+5,15,RAYWHITE);if(click(r)&&idx!=charIndex){charIndex=idx;loadCharacter();}}
 
-        DrawRectangle(w-(int)right,(int)top,(int)right,h-(int)top-(int)bottom,Color{31,33,38,255});int rx=w-(int)right+12;DrawText("ANIMATIONS",rx,(int)top+12,16,Color{180,187,198,255});int ay=(int)top+40,animVisible=10;
+        DrawRectangle(w-(int)right,(int)top,(int)right,h-(int)top-(int)bottom,Color{31,33,38,255});int rx=w-(int)right+12;DrawText("ANIMACIONES",rx,(int)top+12,16,Color{180,187,198,255});int ay=(int)top+40,animVisible=10;
         if(CheckCollisionPointRec(mouse,{(float)(w-right),top,right,300})){int wh=(int)GetMouseWheelMove();if(wh)animScroll=std::clamp(animScroll-wh,0,std::max(0,(int)refs.size()-animVisible));}
         for(int row=0;row<animVisible&&row+animScroll<(int)refs.size();++row){int idx=row+animScroll;Rectangle r{(float)rx,(float)(ay+row*27),right-24,23};DrawRectangleRec(r,idx==animIndex?Color{75,116,72,255}:Color{42,45,51,255});DrawText(refs[idx].name.c_str(),rx+6,(int)r.y+4,14,RAYWHITE);if(click(r)){animIndex=idx;frame=0;playing=true;}}
 
-        int actionY=(int)top+330;DrawText("ACTIONS",rx,actionY,16,Color{180,187,198,255});actionY+=26;
+        int actionY=(int)top+330;DrawText("ACCIONES",rx,actionY,16,Color{180,187,198,255});actionY+=26;
         for(int i=0;i<(int)actions.size();++i){Rectangle r{(float)rx,(float)(actionY+i*26),92,22};DrawRectangleRec(r,i==actionIndex?Color{122,87,47,255}:Color{42,45,51,255});DrawText(actions[i].c_str(),rx+6,(int)r.y+4,13,RAYWHITE);if(click(r))actionIndex=i;auto it=mapping.find(actions[i]);DrawText((it==mapping.end()?"-":it->second).c_str(),rx+102,(int)r.y+4,13,Color{195,201,210,255});}
         Rectangle assign{(float)rx,(float)(actionY+(int)actions.size()*26+8),right-24,32};button(assign,"Assign current animation");if(click(assign)&&!refs.empty()){mapping[actions[actionIndex]]=refs[animIndex].name;status=saveProfile(root,chars[charIndex],mapping)?actions[actionIndex]+" = "+refs[animIndex].name:"Could not save profile";}
 

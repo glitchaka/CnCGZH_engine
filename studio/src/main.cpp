@@ -85,6 +85,7 @@ constexpr int ID_SCALE = 1024;
 constexpr int ID_APPLY = 1025;
 constexpr int ID_DUPLICATE = 1026;
 constexpr int ID_DELETE = 1027;
+constexpr int ID_CHARACTER_LAB = 1028;
 
 constexpr int kToolbarH = 52;
 constexpr int kStatusH = 24;
@@ -102,7 +103,7 @@ fs::path gRoot, gScenePath;
 std::vector<AssetEntry> gAssets;
 std::vector<int> gFilteredAssets;
 std::vector<cncgzh::SceneObject> gObjects;
-std::vector<std::vector<cncgzh::SceneObject>> gUndo;
+std::vector<std::vector<cncgzh::SceneObject>> gDeshacer;
 std::map<std::string, ObjMesh> gMeshes;
 int gActiveAsset = -1;
 int gSelected = -1;
@@ -156,13 +157,13 @@ void setStatus(const std::wstring& text) {
     if (gStatus) SetWindowTextW(gStatus, text.c_str());
 }
 
-void pushUndo() {
-    gUndo.push_back(gObjects);
-    if (gUndo.size() > 80) gUndo.erase(gUndo.begin());
+void pushDeshacer() {
+    gDeshacer.push_back(gObjects);
+    if (gDeshacer.size() > 80) gDeshacer.erase(gDeshacer.begin());
 }
 
 void updateWindowTitle() {
-    SetWindowTextW(gMain, gDirty ? L"CnCGZH Studio - Scene Editor *" : L"CnCGZH Studio - Scene Editor");
+    SetWindowTextW(gMain, gDirty ? L"CnCGZH Studio - Editor de escenas *" : L"CnCGZH Studio - Editor de escenas");
 }
 
 void scanAssets() {
@@ -194,7 +195,7 @@ void refreshAssets() {
         gFilteredAssets.push_back(i);
         SendMessageW(gAssetsList, LB_ADDSTRING, 0, reinterpret_cast<LPARAM>(gAssets[i].name.c_str()));
     }
-    setStatus(std::to_wstring(gFilteredAssets.size()) + L" assets ready");
+    setStatus(std::to_wstring(gFilteredAssets.size()) + L" recursos listos");
 }
 
 void refreshHierarchy() {
@@ -257,11 +258,11 @@ void setTool(ToolMode tool) {
     }
     updateToolButtons();
     switch (tool) {
-        case ToolMode::Select: setStatus(L"Select tool - click an object"); break;
-        case ToolMode::Move: setStatus(L"Move tool - drag selected object on the ground"); break;
-        case ToolMode::Rotate: setStatus(L"Rotate tool - drag horizontally"); break;
-        case ToolMode::Scale: setStatus(L"Scale tool - drag vertically"); break;
-        case ToolMode::Place: setStatus(L"Placement mode - click the viewport; Esc cancels"); break;
+        case ToolMode::Select: setStatus(L"Seleccionar - haz clic en un objeto"); break;
+        case ToolMode::Move: setStatus(L"Mover - arrastra el objeto seleccionado sobre el suelo"); break;
+        case ToolMode::Rotate: setStatus(L"Rotar - arrastra horizontalmente"); break;
+        case ToolMode::Scale: setStatus(L"Escalar - arrastra verticalmente"); break;
+        case ToolMode::Place: setStatus(L"Colocación - haz clic en la vista 3D; Esc cancela"); break;
     }
 }
 
@@ -412,7 +413,7 @@ int pickObject(int x,int y) {
     return best;
 }
 
-void markChanged(const std::wstring& status = L"Scene modified") {
+void markChanged(const std::wstring& status = L"Escena modificada") {
     gDirty=true;
     refreshHierarchy();
     refreshInspector();
@@ -430,7 +431,7 @@ void selectObject(int index) {
 
 void placeActiveAt(float x, float z) {
     if(gActiveAsset<0 || gActiveAsset >= static_cast<int>(gAssets.size())) return;
-    pushUndo();
+    pushDeshacer();
     cncgzh::SceneObject o;
     o.asset=gAssets[gActiveAsset].relative;
     o.x=snapValue(x);
@@ -439,7 +440,7 @@ void placeActiveAt(float x, float z) {
     o.scale=1.0f;
     gObjects.push_back(o);
     gSelected=static_cast<int>(gObjects.size())-1;
-    markChanged(L"Placed " + gAssets[gActiveAsset].name);
+    markChanged(L"Colocado: " + gAssets[gActiveAsset].name);
 }
 
 void addActiveAssetAt(int x,int y) {
@@ -456,57 +457,66 @@ void applyInspector() {
     float x,y,z,r,s;
     if (!readFloatEdit(gEditX,x) || !readFloatEdit(gEditY,y) || !readFloatEdit(gEditZ,z) ||
         !readFloatEdit(gEditRot,r) || !readFloatEdit(gEditScale,s)) {
-        MessageBoxW(gMain,L"One or more transform values are invalid.",L"Transform",MB_ICONWARNING);
+        MessageBoxW(gMain,L"Uno o más valores de transformación no son válidos.",L"Transform",MB_ICONWARNING);
         return;
     }
-    pushUndo();
+    pushDeshacer();
     auto& o=gObjects[gSelected];
     o.x=snapValue(x); o.y=y; o.z=snapValue(z); o.rotationY=r; o.scale=std::clamp(s,0.01f,100.0f);
-    markChanged(L"Transform applied");
+    markChanged(L"Transformación aplicada");
 }
 
 void duplicateSelected() {
     if(gSelected<0 || gSelected >= static_cast<int>(gObjects.size())) return;
-    pushUndo();
+    pushDeshacer();
     auto o=gObjects[gSelected];
     o.x += 0.5f; o.z += 0.5f;
     gObjects.push_back(o);
     gSelected=static_cast<int>(gObjects.size())-1;
-    markChanged(L"Object duplicated");
+    markChanged(L"Objeto duplicado");
 }
 
 void deleteSelected() {
     if(gSelected<0 || gSelected >= static_cast<int>(gObjects.size())) return;
-    pushUndo();
+    pushDeshacer();
     gObjects.erase(gObjects.begin()+gSelected);
     gSelected=-1;
-    markChanged(L"Object deleted");
+    markChanged(L"Objeto eliminado");
 }
 
 void undo() {
-    if(gUndo.empty()) return;
-    gObjects=gUndo.back();
-    gUndo.pop_back();
+    if(gDeshacer.empty()) return;
+    gObjects=gDeshacer.back();
+    gDeshacer.pop_back();
     gSelected=-1;
-    markChanged(L"Undo");
+    markChanged(L"Deshacer");
 }
 
 bool saveScene() {
     if(!cncgzh::saveScene(gScenePath,gObjects)){
-        MessageBoxW(gMain,L"Could not save the scene.",L"CnCGZH Studio",MB_ICONERROR);
+        MessageBoxW(gMain,L"No se pudo guardar la escena.",L"CnCGZH Studio",MB_ICONERROR);
         return false;
     }
     gDirty=false;
     updateWindowTitle();
-    setStatus(L"Scene saved");
+    setStatus(L"Escena guardada");
     return true;
+}
+
+void openCharacterLab() {
+    fs::path exe=executablePath().parent_path()/"CnCGZHCharacterLab.exe";
+    if(!fs::exists(exe)){
+        MessageBoxW(gMain,L"No se encontró CnCGZHCharacterLab.exe junto a Studio. Compila el objetivo CnCGZHCharacterLab.",L"Personajes y animaciones",MB_ICONERROR);
+        return;
+    }
+    ShellExecuteW(gMain,L"open",exe.c_str(),nullptr,gRoot.c_str(),SW_SHOWNORMAL);
 }
 
 void playScene() {
     if(!saveScene()) return;
     fs::path exe=executablePath().parent_path()/"CnCGZHEngine.exe";
     if(!fs::exists(exe)){
-        MessageBoxW(gMain,L"CnCGZHEngine.exe was not found beside Studio.",L"Play",MB_ICONERROR);
+        MessageBoxW(gMain,L"No se encontró CnCGZHEngine.exe junto a Studio.",L"Play",MB_ICONERROR);
         return;
     }
     std::wstring params=L"--scene \""+gScenePath.wstring()+L"\"";
@@ -542,7 +552,8 @@ void updateLayout(HWND hwnd) {
     MoveWindow(gBtnMove,kLeftW+90,10,76,30,TRUE);
     MoveWindow(gBtnRotate,kLeftW+170,10,76,30,TRUE);
     MoveWindow(gBtnScale,kLeftW+250,10,76,30,TRUE);
-    MoveWindow(gSnap,kLeftW+338,14,110,24,TRUE);
+    MoveWindow(gSnap,kLeftW+338,14,118,24,TRUE);
+    MoveWindow(GetDlgItem(hwnd,ID_CHARACTER_LAB),kLeftW+462,10,190,30,TRUE);
 }
 
 bool initGL(HWND hwnd) {
@@ -588,7 +599,7 @@ LRESULT CALLBACK ViewportProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
             if(hit>=0) selectObject(hit);
             else if(gTool==ToolMode::Select) selectObject(-1);
             if(gSelected>=0 && (gTool==ToolMode::Move || gTool==ToolMode::Rotate || gTool==ToolMode::Scale)) {
-                pushUndo();
+                pushDeshacer();
                 gTransformDrag=true;
                 gTransformStartMouse={x,y};
                 gTransformStart=gObjects[gSelected];
@@ -623,7 +634,7 @@ LRESULT CALLBACK ViewportProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
             return 0;
         }
         case WM_LBUTTONUP:
-            if(gTransformDrag){ gTransformDrag=false; ReleaseCapture(); markChanged(L"Transform changed"); }
+            if(gTransformDrag){ gTransformDrag=false; ReleaseCapture(); markChanged(L"Transformación modificada"); }
             return 0;
         case WM_RBUTTONDOWN:
             gOrbiting=true; gLastMouse={GET_X_LPARAM(lp),GET_Y_LPARAM(lp)}; SetCapture(hwnd); return 0;
@@ -645,13 +656,13 @@ LRESULT CALLBACK ViewportProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
             if(gSelected>=0 && gSelected<(int)gObjects.size()) {
                 float step=(GetKeyState(VK_SHIFT)&0x8000)?0.05f:0.25f;
                 bool moved=false;
-                pushUndo();
+                pushDeshacer();
                 if(wp==VK_LEFT){gObjects[gSelected].x-=step;moved=true;}
                 if(wp==VK_RIGHT){gObjects[gSelected].x+=step;moved=true;}
                 if(wp==VK_UP){gObjects[gSelected].z-=step;moved=true;}
                 if(wp==VK_DOWN){gObjects[gSelected].z+=step;moved=true;}
-                if(moved){markChanged(L"Object nudged");return 0;}
-                gUndo.pop_back();
+                if(moved){markChanged(L"Objeto desplazado");return 0;}
+                gDeshacer.pop_back();
             }
             return 0;
         case WM_PAINT: {
@@ -685,15 +696,16 @@ LRESULT CALLBACK MainProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
             gPanelBrush=CreateSolidBrush(RGB(31,33,37));
             gEditBrush=CreateSolidBrush(RGB(42,45,50));
 
-            CreateWindowW(L"BUTTON",L"Save",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,90,30,hwnd,(HMENU)ID_SAVE,nullptr,nullptr);
-            CreateWindowW(L"BUTTON",L"PLAY",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,90,30,hwnd,(HMENU)ID_PLAY,nullptr,nullptr);
-            CreateWindowW(L"BUTTON",L"Clear",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,90,30,hwnd,(HMENU)ID_CLEAR,nullptr,nullptr);
+            CreateWindowW(L"BUTTON",L"Guardar",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,90,30,hwnd,(HMENU)ID_SAVE,nullptr,nullptr);
+            CreateWindowW(L"BUTTON",L"PROBAR",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,90,30,hwnd,(HMENU)ID_PLAY,nullptr,nullptr);
+            CreateWindowW(L"BUTTON",L"Limpiar",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,90,30,hwnd,(HMENU)ID_CLEAR,nullptr,nullptr);
+            CreateWindowW(L"BUTTON",L"Personajes / Animaciones",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,190,30,hwnd,(HMENU)ID_CHARACTER_LAB,nullptr,nullptr);
 
-            gBtnSelect=CreateWindowW(L"BUTTON",L"Select [Q]",WS_CHILD|WS_VISIBLE|BS_AUTORADIOBUTTON|BS_PUSHLIKE,0,0,0,0,hwnd,(HMENU)ID_TOOL_SELECT,nullptr,nullptr);
-            gBtnMove=CreateWindowW(L"BUTTON",L"Move [W]",WS_CHILD|WS_VISIBLE|BS_AUTORADIOBUTTON|BS_PUSHLIKE,0,0,0,0,hwnd,(HMENU)ID_TOOL_MOVE,nullptr,nullptr);
-            gBtnRotate=CreateWindowW(L"BUTTON",L"Rotate [E]",WS_CHILD|WS_VISIBLE|BS_AUTORADIOBUTTON|BS_PUSHLIKE,0,0,0,0,hwnd,(HMENU)ID_TOOL_ROTATE,nullptr,nullptr);
-            gBtnScale=CreateWindowW(L"BUTTON",L"Scale [R]",WS_CHILD|WS_VISIBLE|BS_AUTORADIOBUTTON|BS_PUSHLIKE,0,0,0,0,hwnd,(HMENU)ID_TOOL_SCALE,nullptr,nullptr);
-            gSnap=CreateWindowW(L"BUTTON",L"Grid snap 0.25",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,0,0,0,0,hwnd,(HMENU)ID_SNAP,nullptr,nullptr);
+            gBtnSelect=CreateWindowW(L"BUTTON",L"Seleccionar [Q]",WS_CHILD|WS_VISIBLE|BS_AUTORADIOBUTTON|BS_PUSHLIKE,0,0,0,0,hwnd,(HMENU)ID_TOOL_SELECT,nullptr,nullptr);
+            gBtnMove=CreateWindowW(L"BUTTON",L"Mover [W]",WS_CHILD|WS_VISIBLE|BS_AUTORADIOBUTTON|BS_PUSHLIKE,0,0,0,0,hwnd,(HMENU)ID_TOOL_MOVE,nullptr,nullptr);
+            gBtnRotate=CreateWindowW(L"BUTTON",L"Rotar [E]",WS_CHILD|WS_VISIBLE|BS_AUTORADIOBUTTON|BS_PUSHLIKE,0,0,0,0,hwnd,(HMENU)ID_TOOL_ROTATE,nullptr,nullptr);
+            gBtnScale=CreateWindowW(L"BUTTON",L"Escalar [R]",WS_CHILD|WS_VISIBLE|BS_AUTORADIOBUTTON|BS_PUSHLIKE,0,0,0,0,hwnd,(HMENU)ID_TOOL_SCALE,nullptr,nullptr);
+            gSnap=CreateWindowW(L"BUTTON",L"Cuadrícula 0.25",WS_CHILD|WS_VISIBLE|BS_AUTOCHECKBOX,0,0,0,0,hwnd,(HMENU)ID_SNAP,nullptr,nullptr);
             SendMessageW(gSnap,BM_SETCHECK,BST_CHECKED,0);
 
             gSearch=CreateWindowExW(WS_EX_CLIENTEDGE,L"EDIT",L"",WS_CHILD|WS_VISIBLE|ES_AUTOHSCROLL,0,0,0,0,hwnd,(HMENU)ID_SEARCH,nullptr,nullptr);
@@ -705,11 +717,11 @@ LRESULT CALLBACK MainProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
             gEditZ=CreateWindowExW(WS_EX_CLIENTEDGE,L"EDIT",L"",WS_CHILD|WS_VISIBLE|ES_AUTOHSCROLL,0,0,0,0,hwnd,(HMENU)ID_Z,nullptr,nullptr);
             gEditRot=CreateWindowExW(WS_EX_CLIENTEDGE,L"EDIT",L"",WS_CHILD|WS_VISIBLE|ES_AUTOHSCROLL,0,0,0,0,hwnd,(HMENU)ID_ROT,nullptr,nullptr);
             gEditScale=CreateWindowExW(WS_EX_CLIENTEDGE,L"EDIT",L"",WS_CHILD|WS_VISIBLE|ES_AUTOHSCROLL,0,0,0,0,hwnd,(HMENU)ID_SCALE,nullptr,nullptr);
-            gApply=CreateWindowW(L"BUTTON",L"Apply",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,0,0,hwnd,(HMENU)ID_APPLY,nullptr,nullptr);
-            gDuplicate=CreateWindowW(L"BUTTON",L"Duplicate",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,0,0,hwnd,(HMENU)ID_DUPLICATE,nullptr,nullptr);
-            gDelete=CreateWindowW(L"BUTTON",L"Delete",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,0,0,hwnd,(HMENU)ID_DELETE,nullptr,nullptr);
+            gApply=CreateWindowW(L"BUTTON",L"Aplicar",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,0,0,hwnd,(HMENU)ID_APPLY,nullptr,nullptr);
+            gDuplicate=CreateWindowW(L"BUTTON",L"Duplicar",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,0,0,hwnd,(HMENU)ID_DUPLICATE,nullptr,nullptr);
+            gDelete=CreateWindowW(L"BUTTON",L"Eliminar",WS_CHILD|WS_VISIBLE|BS_PUSHBUTTON,0,0,0,0,hwnd,(HMENU)ID_DELETE,nullptr,nullptr);
 
-            gStatus=CreateWindowW(L"STATIC",L"Ready",WS_CHILD|WS_VISIBLE|SS_LEFT,0,0,0,0,hwnd,(HMENU)ID_STATUS,nullptr,nullptr);
+            gStatus=CreateWindowW(L"STATIC",L"Listo",WS_CHILD|WS_VISIBLE|SS_LEFT,0,0,0,0,hwnd,(HMENU)ID_STATUS,nullptr,nullptr);
             gViewport=CreateWindowExW(0,L"CnCGZHViewport",L"",WS_CHILD|WS_VISIBLE|WS_CLIPSIBLINGS|WS_CLIPCHILDREN,0,0,100,100,hwnd,nullptr,nullptr,nullptr);
 
             EnumChildWindows(hwnd,[](HWND c,LPARAM f)->BOOL{SendMessageW(c,WM_SETFONT,(WPARAM)f,TRUE);return TRUE;},(LPARAM)gFont);
@@ -718,7 +730,7 @@ LRESULT CALLBACK MainProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
             refreshInspector();
             updateToolButtons();
             updateLayout(hwnd);
-            setStatus(L"Ready - select an asset to place it, or choose a transform tool");
+            setStatus(L"Listo - selecciona un recurso para colocarlo o usa una herramienta de transformación");
             return 0;
         }
         case WM_SIZE:
@@ -728,9 +740,10 @@ LRESULT CALLBACK MainProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
             int id=LOWORD(wp), code=HIWORD(wp);
             if(id==ID_SAVE){saveScene();return 0;}
             if(id==ID_PLAY){playScene();return 0;}
+            if(id==ID_CHARACTER_LAB){openCharacterLab();return 0;}
             if(id==ID_CLEAR){
-                if(!gObjects.empty()&&MessageBoxW(hwnd,L"Clear the entire scene?",L"CnCGZH Studio",MB_YESNO|MB_ICONQUESTION)!=IDYES)return 0;
-                pushUndo();gObjects.clear();gSelected=-1;markChanged(L"Scene cleared");return 0;
+                if(!gObjects.empty()&&MessageBoxW(hwnd,L"¿Vaciar toda la escena?",L"CnCGZH Studio",MB_YESNO|MB_ICONQUESTION)!=IDYES)return 0;
+                pushDeshacer();gObjects.clear();gSelected=-1;markChanged(L"Escena vaciada");return 0;
             }
             if(id==ID_TOOL_SELECT){setTool(ToolMode::Select);SetFocus(gViewport);return 0;}
             if(id==ID_TOOL_MOVE){setTool(ToolMode::Move);SetFocus(gViewport);return 0;}
@@ -785,17 +798,17 @@ LRESULT CALLBACK MainProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
             SetBkMode(dc,TRANSPARENT); SetTextColor(dc,RGB(235,238,242));
             SelectObject(dc,gFontBold);
             TextOutW(dc,12,16,L"CnCGZH Studio",13);
-            TextOutW(dc,12,kToolbarH+10,L"ASSETS",6);
-            TextOutW(dc,r.right-kRightW+10,kToolbarH+10,L"SCENE",5);
-            TextOutW(dc,r.right-kRightW+10,kToolbarH+236,L"TRANSFORM",9);
+            TextOutW(dc,12,kToolbarH+10,L"RECURSOS",8);
+            TextOutW(dc,r.right-kRightW+10,kToolbarH+10,L"ESCENA",6);
+            TextOutW(dc,r.right-kRightW+10,kToolbarH+236,L"TRANSFORMACIÓN",14);
             SelectObject(dc,gFont);
             int rx=r.right-kRightW+14, iy=kToolbarH+267;
             TextOutW(dc,rx,iy+4,L"X",1); TextOutW(dc,rx,iy+38,L"Y",1); TextOutW(dc,rx,iy+72,L"Z",1);
-            TextOutW(dc,rx,iy+106,L"Rotation",8); TextOutW(dc,rx,iy+140,L"Scale",5);
+            TextOutW(dc,rx,iy+106,L"Rotación",8); TextOutW(dc,rx,iy+140,L"Escala",6);
             EndPaint(hwnd,&ps); return 0;
         }
         case WM_CLOSE:
-            if(gDirty&&MessageBoxW(hwnd,L"Close without saving changes?",L"CnCGZH Studio",MB_YESNO|MB_ICONWARNING)!=IDYES)return 0;
+            if(gDirty&&MessageBoxW(hwnd,L"¿Cerrar sin guardar los cambios?",L"CnCGZH Studio",MB_YESNO|MB_ICONWARNING)!=IDYES)return 0;
             DestroyWindow(hwnd); return 0;
         case WM_DESTROY:
             if(gFont)DeleteObject(gFont);
@@ -828,7 +841,7 @@ int WINAPI wWinMain(HINSTANCE instance,HINSTANCE,PWSTR,int show) {
     wc.hbrBackground=(HBRUSH)(COLOR_WINDOW+1);
     if(!RegisterClassW(&wc)&&GetLastError()!=ERROR_CLASS_ALREADY_EXISTS)return 1;
 
-    HWND hwnd=CreateWindowExW(0,wc.lpszClassName,L"CnCGZH Studio - Scene Editor",WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,
+    HWND hwnd=CreateWindowExW(0,wc.lpszClassName,L"CnCGZH Studio - Editor de escenas",WS_OVERLAPPEDWINDOW|WS_CLIPCHILDREN,
         CW_USEDEFAULT,CW_USEDEFAULT,1600,950,nullptr,nullptr,instance,nullptr);
     if(!hwnd)return 2;
     ShowWindow(hwnd,show);
