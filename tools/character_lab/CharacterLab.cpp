@@ -107,18 +107,19 @@ Camera3D cameraFor(float yaw,float pitch,float distance){
 
 int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
     fs::path root=findRoot();auto chars=scanCharacters(root);
-    if(chars.empty()){MessageBoxW(nullptr,L"KayKit Adventurers 2.0 and Skeletons 1.1 were not found. Build the project once to prepare the sample assets.",L"CnCGZH Laboratorio de personajes",MB_ICONERROR);return 2;}
+    if(chars.empty()){MessageBoxW(nullptr,L"No se encontraron KayKit Adventurers 2.0 y Skeletons 1.1. Compila el proyecto una vez para preparar los recursos de muestra.",L"CnCGZH Laboratorio de personajes",MB_ICONERROR);return 2;}
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_MSAA_4X_HINT);InitWindow(1500,900,"CnCGZH Laboratorio de personajes");SetTargetFPS(60);
 
     int charIndex=0,animIndex=0,actionIndex=0,charScroll=0,animScroll=0;float frame=0,speed=1,yaw=35,pitch=18,distance=5;bool playing=true,loop=true,orbit=false;Vector2 last{};
     const std::vector<std::string> actions={"Idle","Move","Run","Attack","Interact","PickUp","UseItem","Hit","Death","Spawn"};
+    const std::vector<std::string> actionLabels={"Reposo","Mover","Correr","Atacar","Interactuar","Recoger","Usar objeto","Recibir golpe","Morir","Aparecer"};
     Model model{};bool modelLoaded=false;std::vector<AnimationSet>sets;std::vector<AnimationRef>refs;std::map<std::string,std::string>mapping;std::string status="Listo";
 
     auto loadCharacter=[&](){
         if(modelLoaded)UnloadModel(model);unloadSets(sets);refs.clear();std::string p=utf8(chars[charIndex].model);model=LoadModel(p.c_str());modelLoaded=model.meshCount>0;
         if(modelLoaded)loadAnimations(chars[charIndex],model,sets,refs);mapping=loadProfile(root,chars[charIndex]);animIndex=0;frame=0;playing=true;animScroll=0;
-        status=modelLoaded?std::to_string(refs.size())+" animations loaded":"Could not load model";
+        status=modelLoaded?std::to_string(refs.size())+" animaciones cargadas":"No se pudo cargar el modelo";
     };loadCharacter();
 
     while(!WindowShouldClose()){
@@ -128,7 +129,7 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
 
         BeginDrawing();ClearBackground(Color{20,22,26,255});DrawRectangle(0,0,w,(int)top,Color{28,30,35,255});DrawText("CnCGZH Laboratorio de personajes",16,17,22,RAYWHITE);
         Rectangle bp{left+16,12,86,34},bprev{left+110,12,40,34},bnext{left+156,12,40,34},bminus{left+206,12,40,34},bplus{left+252,12,40,34},bloop{left+300,12,72,34};
-        button(bp,playing?"Pausa":"Reproducir");button(bprev,"<");button(bnext,">");button(bminus,"-");button(bplus,"+");button(bloop,loop?"Bucle":"Once",loop);
+        button(bp,playing?"Pausa":"Reproducir");button(bprev,"<");button(bnext,">");button(bminus,"-");button(bplus,"+");button(bloop,loop?"Bucle":"Una vez",loop);
         if(click(bp))playing=!playing;if(click(bprev)&&!refs.empty()){animIndex=(animIndex+(int)refs.size()-1)%(int)refs.size();frame=0;}if(click(bnext)&&!refs.empty()){animIndex=(animIndex+1)%(int)refs.size();frame=0;}if(click(bminus))speed=std::max(.1f,speed-.1f);if(click(bplus))speed=std::min(3.0f,speed+.1f);if(click(bloop))loop=!loop;
         DrawText(TextFormat("%.1fx",speed),(int)left+386,21,16,Color{205,211,220,255});
 
@@ -141,14 +142,14 @@ int WINAPI wWinMain(HINSTANCE,HINSTANCE,PWSTR,int){
         for(int row=0;row<animVisible&&row+animScroll<(int)refs.size();++row){int idx=row+animScroll;Rectangle r{(float)rx,(float)(ay+row*27),right-24,23};DrawRectangleRec(r,idx==animIndex?Color{75,116,72,255}:Color{42,45,51,255});DrawText(refs[idx].name.c_str(),rx+6,(int)r.y+4,14,RAYWHITE);if(click(r)){animIndex=idx;frame=0;playing=true;}}
 
         int actionY=(int)top+330;DrawText("ACCIONES",rx,actionY,16,Color{180,187,198,255});actionY+=26;
-        for(int i=0;i<(int)actions.size();++i){Rectangle r{(float)rx,(float)(actionY+i*26),92,22};DrawRectangleRec(r,i==actionIndex?Color{122,87,47,255}:Color{42,45,51,255});DrawText(actions[i].c_str(),rx+6,(int)r.y+4,13,RAYWHITE);if(click(r))actionIndex=i;auto it=mapping.find(actions[i]);DrawText((it==mapping.end()?"-":it->second).c_str(),rx+102,(int)r.y+4,13,Color{195,201,210,255});}
-        Rectangle assign{(float)rx,(float)(actionY+(int)actions.size()*26+8),right-24,32};button(assign,"Assign current animation");if(click(assign)&&!refs.empty()){mapping[actions[actionIndex]]=refs[animIndex].name;status=saveProfile(root,chars[charIndex],mapping)?actions[actionIndex]+" = "+refs[animIndex].name:"Could not save profile";}
+        for(int i=0;i<(int)actions.size();++i){Rectangle r{(float)rx,(float)(actionY+i*26),92,22};DrawRectangleRec(r,i==actionIndex?Color{122,87,47,255}:Color{42,45,51,255});DrawText(actionLabels[i].c_str(),rx+6,(int)r.y+4,13,RAYWHITE);if(click(r))actionIndex=i;auto it=mapping.find(actions[i]);DrawText((it==mapping.end()?"-":it->second).c_str(),rx+102,(int)r.y+4,13,Color{195,201,210,255});}
+        Rectangle assign{(float)rx,(float)(actionY+(int)actions.size()*26+8),right-24,32};button(assign,"Asignar animación actual");if(click(assign)&&!refs.empty()){mapping[actions[actionIndex]]=refs[animIndex].name;status=saveProfile(root,chars[charIndex],mapping)?actions[actionIndex]+" = "+refs[animIndex].name:"No se pudo guardar el perfil";}
 
         BeginScissorMode((int)view.x,(int)view.y,(int)view.width,(int)view.height);BeginMode3D(cameraFor(yaw,pitch,distance));DrawGrid(20,1.0f);if(modelLoaded)DrawModel(model,{0,0,0},1.0f,WHITE);EndMode3D();EndScissorMode();DrawRectangleLinesEx(view,1,Color{74,80,89,255});
-        if(!refs.empty()){DrawText(refs[animIndex].name.c_str(),(int)view.x+14,(int)view.y+14,20,RAYWHITE);if(auto*a=currentAnimation(sets,refs,animIndex))DrawText(TextFormat("Frame %.1f / %d",frame,a->keyframeCount),(int)view.x+14,(int)view.y+41,15,Color{190,196,205,255});}
-        DrawText("RMB orbit | Wheel zoom",(int)view.x+14,(int)(view.y+view.height-26),15,Color{170,177,187,255});
+        if(!refs.empty()){DrawText(refs[animIndex].name.c_str(),(int)view.x+14,(int)view.y+14,20,RAYWHITE);if(auto*a=currentAnimation(sets,refs,animIndex))DrawText(TextFormat("Fotograma %.1f / %d",frame,a->keyframeCount),(int)view.x+14,(int)view.y+41,15,Color{190,196,205,255});}
+        DrawText("Botón derecho: orbitar | Rueda: zoom",(int)view.x+14,(int)(view.y+view.height-26),15,Color{170,177,187,255});
 
-        DrawRectangle(0,h-(int)bottom,w,(int)bottom,Color{27,29,33,255});DrawText(status.c_str(),12,h-23,14,Color{205,211,220,255});DrawText(("Profile: "+utf8(profilePath(root,chars[charIndex]))).c_str(),w-600,h-23,13,Color{145,152,162,255});EndDrawing();
+        DrawRectangle(0,h-(int)bottom,w,(int)bottom,Color{27,29,33,255});DrawText(status.c_str(),12,h-23,14,Color{205,211,220,255});DrawText(("Perfil: "+utf8(profilePath(root,chars[charIndex]))).c_str(),w-600,h-23,13,Color{145,152,162,255});EndDrawing();
     }
 
     unloadSets(sets);if(modelLoaded)UnloadModel(model);CloseWindow();return 0;

@@ -457,7 +457,7 @@ void applyInspector() {
     float x,y,z,r,s;
     if (!readFloatEdit(gEditX,x) || !readFloatEdit(gEditY,y) || !readFloatEdit(gEditZ,z) ||
         !readFloatEdit(gEditRot,r) || !readFloatEdit(gEditScale,s)) {
-        MessageBoxW(gMain,L"Uno o más valores de transformación no son válidos.",L"Transform",MB_ICONWARNING);
+        MessageBoxW(gMain,L"Uno o más valores de transformación no son válidos.",L"Transformación",MB_ICONWARNING);
         return;
     }
     pushDeshacer();
@@ -516,7 +516,7 @@ void playScene() {
     if(!saveScene()) return;
     fs::path exe=executablePath().parent_path()/"CnCGZHEngine.exe";
     if(!fs::exists(exe)){
-        MessageBoxW(gMain,L"No se encontró CnCGZHEngine.exe junto a Studio.",L"Play",MB_ICONERROR);
+        MessageBoxW(gMain,L"No se encontró CnCGZHEngine.exe junto a Studio.",L"Probar",MB_ICONERROR);
         return;
     }
     std::wstring params=L"--scene \""+gScenePath.wstring()+L"\"";
@@ -759,7 +759,7 @@ LRESULT CALLBACK MainProc(HWND hwnd,UINT msg,WPARAM wp,LPARAM lp) {
                     gActiveAsset=gFilteredAssets[row];
                     gTool=ToolMode::Place;
                     updateToolButtons();
-                    setStatus(L"Placement mode - click the 3D viewport; Esc cancels");
+                    setStatus(L"Colocación - haz clic en la vista 3D; Esc cancela");
                     SetFocus(gViewport);
                 }
                 return 0;
