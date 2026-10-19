@@ -51,7 +51,7 @@ if(WIN32)
     )
     target_link_libraries(CnCGZHCharacterLab PRIVATE raylib shell32 user32)
     target_compile_definitions(CnCGZHCharacterLab PRIVATE UNICODE _UNICODE NOMINMAX)
-    target_compile_options(CnCGZHCharacterLab PRIVATE /utf-8)
+    target_compile_options(CnCGZHCharacterLab PRIVATE /utf-8 /FI${CMAKE_SOURCE_DIR}/tools/character_lab/WinRaylibCompat.h)
     add_dependencies(CnCGZHCharacterLab cncgzh_assets)
 endif()
 
