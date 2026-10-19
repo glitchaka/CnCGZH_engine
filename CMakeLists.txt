@@ -16,7 +16,7 @@ if(WIN32)
             -DCNCGZH_SOURCE_DIR=${CMAKE_SOURCE_DIR}
             -DCNCGZH_BINARY_DIR=${CMAKE_BINARY_DIR}
             -P ${CMAKE_SOURCE_DIR}/cmake/FetchKayKit.cmake
-        COMMENT "Preparing built-in KayKit Dungeon assets"
+        COMMENT "Preparing built-in KayKit sample assets"
         VERBATIM
     )
 
@@ -35,6 +35,24 @@ if(WIN32)
     target_compile_definitions(CnCGZHStudio PRIVATE UNICODE _UNICODE NOMINMAX)
     target_compile_options(CnCGZHStudio PRIVATE /utf-8)
     add_dependencies(CnCGZHStudio cncgzh_assets)
+
+    include(FetchContent)
+    set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
+    set(USE_EXTERNAL_GLFW OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(raylib
+        URL https://github.com/raysan5/raylib/archive/refs/tags/6.0.tar.gz
+        DOWNLOAD_EXTRACT_TIMESTAMP OFF
+    )
+    FetchContent_MakeAvailable(raylib)
+
+    add_executable(CnCGZHCharacterLab WIN32
+        tools/character_lab/CharacterLab.cpp
+    )
+    target_link_libraries(CnCGZHCharacterLab PRIVATE raylib shell32 user32)
+    target_compile_definitions(CnCGZHCharacterLab PRIVATE UNICODE _UNICODE NOMINMAX)
+    target_compile_options(CnCGZHCharacterLab PRIVATE /utf-8)
+    add_dependencies(CnCGZHCharacterLab cncgzh_assets)
 endif()
 
 # EA's original Generals/Zero Hour source is preserved under upstream/ea-generals-zero-hour.
