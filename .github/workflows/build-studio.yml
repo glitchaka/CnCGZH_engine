@@ -4,9 +4,11 @@ on:
   push:
     paths:
       - 'CMakeLists.txt'
+      - 'cmake/**'
       - 'engine/**'
       - 'runtime/**'
       - 'studio/**'
+      - 'tools/**'
       - '.github/workflows/build-studio.yml'
   workflow_dispatch:
 
@@ -24,3 +26,5 @@ jobs:
         run: cmake --build build --config Release --target CnCGZHEngine
       - name: Build studio
         run: cmake --build build --config Release --target CnCGZHStudio
+      - name: Build character lab
+        run: cmake --build build --config Release --target CnCGZHCharacterLab
