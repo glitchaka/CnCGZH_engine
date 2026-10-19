@@ -21,7 +21,7 @@ if(WIN32)
     )
 
     add_executable(CnCGZHEngine WIN32
-        runtime/src/main.cpp
+        runtime/src/PlayerMain.cpp
     )
     target_link_libraries(CnCGZHEngine PRIVATE cncgzh_engine_core user32 gdi32 shell32 opengl32)
     target_compile_definitions(CnCGZHEngine PRIVATE UNICODE _UNICODE NOMINMAX)
@@ -36,5 +36,5 @@ if(WIN32)
 endif()
 
 # EA's original Generals/Zero Hour source is preserved under upstream/ea-generals-zero-hour.
-# The new runtime is the executable engine layer. Legacy Generals subsystems are integrated
-# behind engine adapters progressively instead of making the editor itself the runtime.
+# The runtime and Studio use the build/project root containing assets + projects, so the
+# bundled sample content works from a clean clone without manual asset import.
