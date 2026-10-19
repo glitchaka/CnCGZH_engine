@@ -53,6 +53,10 @@ if(WIN32)
     target_compile_definitions(CnCGZHCharacterLab PRIVATE UNICODE _UNICODE NOMINMAX)
     target_compile_options(CnCGZHCharacterLab PRIVATE /utf-8 /FI${CMAKE_SOURCE_DIR}/tools/character_lab/WinRaylibCompat.h)
     add_dependencies(CnCGZHCharacterLab cncgzh_assets)
+
+    # Studio exposes the character/animation laboratory from its toolbar. Building
+    # Studio must therefore always produce the companion executable beside it.
+    add_dependencies(CnCGZHStudio CnCGZHCharacterLab)
 endif()
 
 # EA's original Generals/Zero Hour source is preserved under upstream/ea-generals-zero-hour.
