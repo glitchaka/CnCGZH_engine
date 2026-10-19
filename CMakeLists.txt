@@ -25,6 +25,7 @@ if(WIN32)
     )
     target_link_libraries(CnCGZHEngine PRIVATE cncgzh_engine_core user32 gdi32 shell32 opengl32)
     target_compile_definitions(CnCGZHEngine PRIVATE UNICODE _UNICODE NOMINMAX)
+    target_compile_options(CnCGZHEngine PRIVATE /utf-8)
     add_dependencies(CnCGZHEngine cncgzh_assets)
 
     add_executable(CnCGZHStudio WIN32
@@ -32,6 +33,7 @@ if(WIN32)
     )
     target_link_libraries(CnCGZHStudio PRIVATE cncgzh_engine_core user32 gdi32 comctl32 shell32 opengl32 glu32)
     target_compile_definitions(CnCGZHStudio PRIVATE UNICODE _UNICODE NOMINMAX)
+    target_compile_options(CnCGZHStudio PRIVATE /utf-8)
     add_dependencies(CnCGZHStudio cncgzh_assets)
 endif()
 
