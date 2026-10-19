@@ -11,17 +11,28 @@ add_library(cncgzh_engine_core STATIC
 target_include_directories(cncgzh_engine_core PUBLIC engine)
 
 if(WIN32)
+    add_custom_target(cncgzh_assets ALL
+        COMMAND ${CMAKE_COMMAND}
+            -DCNCGZH_SOURCE_DIR=${CMAKE_SOURCE_DIR}
+            -DCNCGZH_BINARY_DIR=${CMAKE_BINARY_DIR}
+            -P ${CMAKE_SOURCE_DIR}/cmake/FetchKayKit.cmake
+        COMMENT "Preparing built-in KayKit Dungeon assets"
+        VERBATIM
+    )
+
     add_executable(CnCGZHEngine WIN32
         runtime/src/main.cpp
     )
     target_link_libraries(CnCGZHEngine PRIVATE cncgzh_engine_core user32 gdi32 shell32 opengl32)
     target_compile_definitions(CnCGZHEngine PRIVATE UNICODE _UNICODE NOMINMAX)
+    add_dependencies(CnCGZHEngine cncgzh_assets)
 
     add_executable(CnCGZHStudio WIN32
         studio/src/main.cpp
     )
     target_link_libraries(CnCGZHStudio PRIVATE cncgzh_engine_core user32 gdi32 comdlg32 shell32)
     target_compile_definitions(CnCGZHStudio PRIVATE UNICODE _UNICODE NOMINMAX)
+    add_dependencies(CnCGZHStudio cncgzh_assets)
 endif()
 
 # EA's original Generals/Zero Hour source is preserved under upstream/ea-generals-zero-hour.
