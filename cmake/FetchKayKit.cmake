@@ -4,14 +4,11 @@ if(NOT DEFINED CNCGZH_SOURCE_DIR OR NOT DEFINED CNCGZH_BINARY_DIR)
     message(FATAL_ERROR "CNCGZH_SOURCE_DIR and CNCGZH_BINARY_DIR are required")
 endif()
 
-set(asset_root "${CNCGZH_BINARY_DIR}/assets/sample/kaykit-dungeon")
+# Studio and Runtime currently resolve the repository root and read assets from
+# <repo>/assets/sample. Put the bundled pack there so it is available at first
+# launch without any import dialog or manual copy step.
+set(asset_root "${CNCGZH_SOURCE_DIR}/assets/sample/kaykit-dungeon")
 set(marker "${asset_root}/.cncgzh-kaykit-ready")
-set(project_root "${CNCGZH_BINARY_DIR}/projects")
-
-# Keep the sample project beside the build resources so Studio/Runtime work
-# regardless of whether the executable is in Debug/Release underneath it.
-file(REMOVE_RECURSE "${project_root}")
-file(COPY "${CNCGZH_SOURCE_DIR}/projects/" DESTINATION "${project_root}")
 
 if(EXISTS "${marker}")
     return()
@@ -25,7 +22,7 @@ set(url "https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0/arc
 file(MAKE_DIRECTORY "${cache_dir}")
 
 if(NOT EXISTS "${zip_file}")
-    message(STATUS "Fetching bundled KayKit Dungeon Remastered assets...")
+    message(STATUS "Fetching built-in KayKit Dungeon Remastered assets...")
     file(DOWNLOAD
         "${url}"
         "${zip_file}"
