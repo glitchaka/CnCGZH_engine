@@ -11,7 +11,7 @@ endif()
 
 include(FetchContent)
 
-# Pinned editor dependencies keep clean-clone builds reproducible.
+# Pinned editor dependencies keep clean-clone Windows builds reproducible.
 FetchContent_Declare(imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG d88f238d1d363ef387382b2e29ad12cf96f826ac
