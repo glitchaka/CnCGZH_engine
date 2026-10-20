@@ -269,7 +269,7 @@ float4 main() : SV_Target { return tint; }
         cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         g_device->CreateBuffer(&cbd, nullptr, &constantBuffer);
 
-        std::array<Vertex,8> cube = {{{-.5f,-.5f,-.5f},{.5f,-.5f,-.5f},{.5f,.5f,-.5f},{-.5f,.5f,-.5f},{-.5f,-.5f,.5f},{.5f,-.5f,.5f},{.5f,.5f,.5f},{-.5f,.5f,.5f}}};
+        std::array<Vertex,8> cube = {{ Vertex{XMFLOAT3{-.5f,-.5f,-.5f}}, Vertex{XMFLOAT3{.5f,-.5f,-.5f}}, Vertex{XMFLOAT3{.5f,.5f,-.5f}}, Vertex{XMFLOAT3{-.5f,.5f,-.5f}}, Vertex{XMFLOAT3{-.5f,-.5f,.5f}}, Vertex{XMFLOAT3{.5f,-.5f,.5f}}, Vertex{XMFLOAT3{.5f,.5f,.5f}}, Vertex{XMFLOAT3{-.5f,.5f,.5f}} }};
         std::array<std::uint16_t,36> indices = {{0,1,2,0,2,3,4,6,5,4,7,6,0,4,5,0,5,1,3,2,6,3,6,7,1,5,6,1,6,2,0,3,7,0,7,4}};
         makeImmutableBuffer(cube.data(), sizeof(cube), D3D11_BIND_VERTEX_BUFFER, &cubeVB);
         makeImmutableBuffer(indices.data(), sizeof(indices), D3D11_BIND_INDEX_BUFFER, &cubeIB);
