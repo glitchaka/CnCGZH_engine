@@ -1,10 +1,11 @@
-name: Build CnCGZH Studio
+name: Build Studio
 
 on:
   push:
     paths:
       - 'CMakeLists.txt'
       - 'editor/**'
+      - 'compEng.bat'
       - '.github/workflows/build-studio.yml'
   workflow_dispatch:
 

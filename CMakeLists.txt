@@ -46,10 +46,11 @@ target_link_libraries(cncgzh_imgui PUBLIC d3d11 dxgi d3dcompiler)
 add_executable(CnCGZHStudio WIN32
     editor/src/main.cpp
     editor/src/StudioModel.h
+    editor/src/Win32ImGuiForward.h
 )
 target_include_directories(CnCGZHStudio PRIVATE editor/src)
 target_link_libraries(CnCGZHStudio PRIVATE cncgzh_imgui d3d11 dxgi d3dcompiler user32 gdi32 shell32)
 target_compile_definitions(CnCGZHStudio PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
-target_compile_options(CnCGZHStudio PRIVATE /utf-8 /W4 /permissive-)
+target_compile_options(CnCGZHStudio PRIVATE /utf-8 /W4 /permissive- /FI${CMAKE_SOURCE_DIR}/editor/src/Win32ImGuiForward.h)
 
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT CnCGZHStudio)
