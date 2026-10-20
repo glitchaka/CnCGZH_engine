@@ -1,0 +1,35 @@
+name: Patch Studio v2
+
+on:
+  push:
+    branches: [studio-v2]
+    paths: ['.github/workflows/patch-studio-v2.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: studio-v2
+      - name: Fix DirectX vertex initialization
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('editor/src/main.cpp')
+          s = p.read_text(encoding='utf-8')
+          old = 'std::array<Vertex,8> cube = {{{-.5f,-.5f,-.5f},{.5f,-.5f,-.5f},{.5f,.5f,-.5f},{-.5f,.5f,-.5f},{-.5f,-.5f,.5f},{.5f,-.5f,.5f},{.5f,.5f,.5f},{-.5f,.5f,.5f}}};'
+          new = 'std::array<Vertex,8> cube = {{ Vertex{XMFLOAT3{-.5f,-.5f,-.5f}}, Vertex{XMFLOAT3{.5f,-.5f,-.5f}}, Vertex{XMFLOAT3{.5f,.5f,-.5f}}, Vertex{XMFLOAT3{-.5f,.5f,-.5f}}, Vertex{XMFLOAT3{-.5f,-.5f,.5f}}, Vertex{XMFLOAT3{.5f,-.5f,.5f}}, Vertex{XMFLOAT3{.5f,.5f,.5f}}, Vertex{XMFLOAT3{-.5f,.5f,.5f}} }};'
+          if old not in s:
+              raise SystemExit('expected source line not found')
+          p.write_text(s.replace(old, new), encoding='utf-8')
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add editor/src/main.cpp
+          git commit -m "Fix viewport cube vertex initialization"
+          git push origin HEAD:studio-v2
