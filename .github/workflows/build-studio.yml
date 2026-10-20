@@ -1,14 +1,10 @@
-name: Build Engine
+name: Build CnCGZH Studio
 
 on:
   push:
     paths:
       - 'CMakeLists.txt'
-      - 'cmake/**'
-      - 'engine/**'
-      - 'runtime/**'
-      - 'studio/**'
-      - 'tools/**'
+      - 'editor/**'
       - '.github/workflows/build-studio.yml'
   workflow_dispatch:
 
@@ -22,11 +18,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Configure
         run: cmake -S . -B build -A x64
-      - name: Build engine
-        run: cmake --build build --config Release --target CnCGZHEngine
-      - name: Build studio
+      - name: Build Studio
         run: cmake --build build --config Release --target CnCGZHStudio
-      - name: Build character lab
-        run: cmake --build build --config Release --target CnCGZHCharacterLab
-
-# Verifies the Studio, engine and character animation tools on Windows.
