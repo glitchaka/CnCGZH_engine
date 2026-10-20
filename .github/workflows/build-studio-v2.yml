@@ -1,0 +1,23 @@
+name: Build Studio v2
+
+on:
+  push:
+    branches: [studio-v2, main]
+    paths:
+      - 'CMakeLists.txt'
+      - 'editor/**'
+      - '.github/workflows/build-studio-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -A x64
+      - name: Build Studio
+        run: cmake --build build --config Release --target CnCGZHStudio
