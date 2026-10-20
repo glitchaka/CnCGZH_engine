@@ -1,64 +1,55 @@
-cmake_minimum_required(VERSION 3.20)
-project(CnCGZHEngine LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.24)
+project(CnCGZHStudio LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_library(cncgzh_engine_core STATIC
-    engine/core/BlockGraph.cpp
-    engine/runtime/Runtime.cpp
-)
-target_include_directories(cncgzh_engine_core PUBLIC engine)
-
-if(WIN32)
-    add_custom_target(cncgzh_assets ALL
-        COMMAND ${CMAKE_COMMAND}
-            -DCNCGZH_SOURCE_DIR=${CMAKE_SOURCE_DIR}
-            -DCNCGZH_BINARY_DIR=${CMAKE_BINARY_DIR}
-            -P ${CMAKE_SOURCE_DIR}/cmake/FetchKayKit.cmake
-        COMMENT "Preparing built-in KayKit sample assets"
-        VERBATIM
-    )
-
-    add_executable(CnCGZHEngine WIN32
-        runtime/src/PlayerMain.cpp
-    )
-    target_link_libraries(CnCGZHEngine PRIVATE cncgzh_engine_core user32 gdi32 shell32 opengl32)
-    target_compile_definitions(CnCGZHEngine PRIVATE UNICODE _UNICODE NOMINMAX)
-    target_compile_options(CnCGZHEngine PRIVATE /utf-8)
-    add_dependencies(CnCGZHEngine cncgzh_assets)
-
-    add_executable(CnCGZHStudio WIN32
-        studio/src/main.cpp
-    )
-    target_link_libraries(CnCGZHStudio PRIVATE cncgzh_engine_core user32 gdi32 comctl32 shell32 opengl32 glu32)
-    target_compile_definitions(CnCGZHStudio PRIVATE UNICODE _UNICODE NOMINMAX)
-    target_compile_options(CnCGZHStudio PRIVATE /utf-8)
-    add_dependencies(CnCGZHStudio cncgzh_assets)
-
-    include(FetchContent)
-    set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(BUILD_GAMES OFF CACHE BOOL "" FORCE)
-    set(USE_EXTERNAL_GLFW OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(raylib
-        URL https://github.com/raysan5/raylib/archive/refs/tags/6.0.tar.gz
-        DOWNLOAD_EXTRACT_TIMESTAMP OFF
-    )
-    FetchContent_MakeAvailable(raylib)
-
-    add_executable(CnCGZHCharacterLab WIN32
-        tools/character_lab/CharacterLab.cpp
-    )
-    target_link_libraries(CnCGZHCharacterLab PRIVATE raylib shell32 user32)
-    target_compile_definitions(CnCGZHCharacterLab PRIVATE UNICODE _UNICODE NOMINMAX)
-    target_compile_options(CnCGZHCharacterLab PRIVATE /utf-8 /FI${CMAKE_SOURCE_DIR}/tools/character_lab/WinRaylibCompat.h)
-    add_dependencies(CnCGZHCharacterLab cncgzh_assets)
-
-    # Studio exposes the character/animation laboratory from its toolbar. Building
-    # Studio must therefore always produce the companion executable beside it.
-    add_dependencies(CnCGZHStudio CnCGZHCharacterLab)
+if(NOT WIN32)
+    message(FATAL_ERROR "CnCGZH Studio currently targets Windows.")
 endif()
 
-# EA's original Generals/Zero Hour source is preserved under upstream/ea-generals-zero-hour.
-# The runtime and Studio use the build/project root containing assets + projects, so the
-# bundled sample content works from a clean clone without manual asset import.
+include(FetchContent)
+
+FetchContent_Declare(imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG d88f238d1d363ef387382b2e29ad12cf96f826ac
+    GIT_SHALLOW FALSE
+)
+FetchContent_MakeAvailable(imgui)
+
+FetchContent_Declare(imguizmo
+    GIT_REPOSITORY https://github.com/CedricGuillemet/ImGuizmo.git
+    GIT_TAG 105e4fde45e4e74aae8973d98750820ef7aca7e2
+    GIT_SHALLOW FALSE
+)
+FetchContent_MakeAvailable(imguizmo)
+
+add_library(cncgzh_imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_dx11.cpp
+    ${imguizmo_SOURCE_DIR}/src/ImGuizmo.cpp
+)
+target_include_directories(cncgzh_imgui PUBLIC
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+    ${imguizmo_SOURCE_DIR}/src
+)
+target_compile_definitions(cncgzh_imgui PUBLIC IMGUI_DEFINE_MATH_OPERATORS NOMINMAX WIN32_LEAN_AND_MEAN)
+target_compile_options(cncgzh_imgui PRIVATE /utf-8)
+target_link_libraries(cncgzh_imgui PUBLIC d3d11 dxgi d3dcompiler)
+
+add_executable(CnCGZHStudio WIN32
+    editor/src/main.cpp
+    editor/src/StudioModel.h
+)
+target_include_directories(CnCGZHStudio PRIVATE editor/src)
+target_link_libraries(CnCGZHStudio PRIVATE cncgzh_imgui d3d11 dxgi d3dcompiler user32 gdi32 shell32)
+target_compile_definitions(CnCGZHStudio PRIVATE UNICODE _UNICODE NOMINMAX WIN32_LEAN_AND_MEAN)
+target_compile_options(CnCGZHStudio PRIVATE /utf-8 /W4 /permissive-)
+
+set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT CnCGZHStudio)
