@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "blocks": [
-    {"id":1,"type":"on_start","x":80,"y":80,"next":[2],"args":{}},
-    {"id":2,"type":"show_message","x":80,"y":140,"next":[3],"args":{"message":"CnCGZH Engine sample project"}},
-    {"id":3,"type":"spawn","x":80,"y":200,"next":[4],"args":{"archetype":"sample_tank","x":"0","y":"0","z":"0"}},
-    {"id":4,"type":"move_to","x":80,"y":260,"next":[],"args":{"x":"250","y":"100","z":"0"}}
-  ]
-}
