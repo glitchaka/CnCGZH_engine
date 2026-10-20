@@ -21,3 +21,5 @@ jobs:
         run: cmake -S . -B build -A x64
       - name: Build Studio
         run: cmake --build build --config Release --target CnCGZHStudio
+
+# Clean validation for the rebuilt visual Studio branch.
