@@ -1,34 +1,38 @@
-# CnCGZH Engine
+# CnCGZH Engine / Studio
 
-CnCGZH Engine is a reusable RTS-oriented game-engine project derived from Electronic Arts' public Command & Conquer Generals / Zero Hour source release.
+CnCGZH Studio es el editor visual del código fuente de Command & Conquer: Generals / Zero Hour conservado en `upstream/ea-generals-zero-hour`.
 
-The goal is **not** to keep building one specific C&C game. The repository preserves EA's released source as an upstream reference and builds a generic engine/editor layer around it so new games can be authored as projects.
+No hay una versión 1 ni una versión 2 del editor. Hay una sola aplicación: **CnCGZH Studio**.
 
-## What is here now
+## Objetivo
 
-- `upstream/ea-generals-zero-hour/` — complete snapshot imported from `electronicarts/CnC_Generals_Zero_Hour`.
-- `engine/core/` — engine-neutral API plus an executable visual-script graph model.
-- `engine/legacy/` — compatibility boundary for progressively wrapping the original Generals systems.
-- `studio/` — native Win32 visual editor MVP with a Scratch-like block palette, canvas and inspector.
-- `projects/sample-rts/` — example game project and example block graph.
-- `assets/sample/` — original neutral placeholder art for development.
-- `assets/ea-source-samples/` — resources copied only from files that are actually present in EA's source-code release.
-- `tools/extract_sample_assets.py` — reproducible source-resource collector.
+Exponer las herramientas y sistemas del motor mediante una interfaz visual para que puedan usarse sin escribir C++ directamente.
 
-## Studio MVP
+La base actual incluye:
 
-The current Studio is deliberately small and dependency-free: drag blocks from the left palette onto the canvas, reposition them, inspect them, delete them and save a block layout. The engine-side block graph already exposes generic commands for spawning, movement, health, resources and UI messages.
+- viewport 3D;
+- jerarquía de objetos;
+- inspector de transformación;
+- gizmos de mover, rotar y escalar;
+- cámaras visibles en escena;
+- navegador de recursos;
+- catálogo de funciones y cabeceras del código original;
+- scripting visual anidado a cada objeto.
 
-The next milestones are JSON load/save parity with `projects/sample-rts`, property editing, map/entity inspectors, an asset browser and Play-in-Editor through the legacy adapter.
+## Código original
 
-## Important asset distinction
+El código fuente original de Generals / Zero Hour se mantiene bajo:
 
-EA's source repository is a **source-code release**, not a redistribution of the installed game's commercial art/data. This repository therefore does not pretend to contain all Generals/Zero Hour textures, models, audio or maps. The extractor only collects resources already committed to EA's public source release; the neutral sample assets are original placeholders for engine development.
+`upstream/ea-generals-zero-hour`
 
-## Build scope
+El editor nuevo está bajo:
 
-The top-level CMake project builds the new engine core and native Studio only. The preserved upstream code is intentionally not part of that build yet because EA's release depends on old or missing SDKs/libraries and requires significant modernization. That work is isolated behind adapters rather than contaminating new projects with legacy dependencies.
+`editor/`
 
-## License
+## Compilar en Windows
 
-This project is based on EA's GPLv3 source release and retains its GPLv3 licensing requirements plus EA's additional terms. The original license is preserved at `upstream/ea-generals-zero-hour/LICENSE.md`. This repository is an independent derivative project and is not endorsed by Electronic Arts.
+```powershell
+cmake -S . -B build -A x64
+cmake --build build --config Release --target CnCGZHStudio
+.\build\Release\CnCGZHStudio.exe
+```
