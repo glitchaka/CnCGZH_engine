@@ -392,7 +392,6 @@ public:
     bool initialize() { return renderer.initialize(); }
 
     void frame() {
-        ImGuiIO& io=ImGui::GetIO();
         ImGui::DockSpaceOverViewport(0,ImGui::GetMainViewport(),ImGuiDockNodeFlags_PassthruCentralNode);
         menuBar();
         hierarchyPanel();
@@ -419,7 +418,7 @@ private:
         if(!ImGui::BeginMainMenuBar()) return;
         if(ImGui::BeginMenu("Archivo")){ if(ImGui::MenuItem("Guardar escena","Ctrl+S")) saveScene(); if(ImGui::MenuItem("Salir")) PostMessageW(g_hwnd,WM_CLOSE,0,0); ImGui::EndMenu(); }
         if(ImGui::BeginMenu("Crear")){ if(ImGui::MenuItem("Objeto vacío")) addObject(ObjectKind::Empty,"Objeto vacío"); if(ImGui::MenuItem("Malla")) addObject(ObjectKind::Mesh,"Malla"); if(ImGui::MenuItem("Cámara")) addObject(ObjectKind::Camera,"Cámara"); if(ImGui::MenuItem("Luz")) addObject(ObjectKind::Light,"Luz"); ImGui::EndMenu(); }
-        ImGui::Separator(); ImGui::TextDisabled("CnCGZH Studio v2");
+        ImGui::Separator(); ImGui::TextDisabled("CnCGZH Studio");
         ImGui::EndMainMenuBar();
     }
 
@@ -459,7 +458,7 @@ private:
 
     void scanAssets() {
         assets.clear(); std::error_code ec;
-        std::vector<fs::path> bases={root/"assets",root/"upstream"/"ea-generals-zero-hour"};
+        std::vector<fs::path> bases={root/"upstream"/"ea-generals-zero-hour"};
         for(auto& base:bases){if(!fs::exists(base))continue;for(fs::recursive_directory_iterator it(base,fs::directory_options::skip_permission_denied,ec),end;it!=end;it.increment(ec)){if(ec){ec.clear();continue;}if(!it->is_regular_file(ec))continue;std::string ext=lower(it->path().extension().string());if(ext==".w3d"||ext==".obj"||ext==".fbx"||ext==".gltf"||ext==".glb"||ext==".dds"||ext==".tga"||ext==".ini"||ext==".map")assets.push_back(it->path());if(assets.size()>=12000)return;}}
     }
 
@@ -538,7 +537,7 @@ private:
 
     void statusPanel(){ImGui::Begin("Estado");ImGui::Text("Proyecto: %s",root.generic_string().c_str());ImGui::SameLine();ImGui::TextDisabled("| %zu objetos | %zu símbolos C++ catalogados",objects.size(),api.symbols.size());ImGui::End();}
 
-    void saveScene(){fs::path dir=root/"projects";std::error_code ec;fs::create_directories(dir,ec);std::ofstream out(dir/"studio-v2.scene",std::ios::binary);if(!out)return;out<<"CNCGZH_STUDIO_SCENE_V2\n";for(auto& o:objects){out<<"OBJECT|"<<o.id<<'|'<<(int)o.kind<<'|'<<o.name<<'|'<<o.transform.position[0]<<'|'<<o.transform.position[1]<<'|'<<o.transform.position[2]<<'|'<<o.transform.rotation[0]<<'|'<<o.transform.rotation[1]<<'|'<<o.transform.rotation[2]<<'|'<<o.transform.scale[0]<<'|'<<o.transform.scale[1]<<'|'<<o.transform.scale[2]<<'|'<<o.assetPath.generic_string()<<"\n";for(auto& n:o.script.nodes)out<<"NODE|"<<o.id<<'|'<<n.id<<'|'<<n.type<<'|'<<n.title<<'|'<<n.x<<'|'<<n.y<<"\n";}}
+    void saveScene(){fs::path dir=root/"projects";std::error_code ec;fs::create_directories(dir,ec);std::ofstream out(dir/"studio.scene",std::ios::binary);if(!out)return;out<<"CNCGZH_STUDIO_SCENE\n";for(auto& o:objects){out<<"OBJECT|"<<o.id<<'|'<<(int)o.kind<<'|'<<o.name<<'|'<<o.transform.position[0]<<'|'<<o.transform.position[1]<<'|'<<o.transform.position[2]<<'|'<<o.transform.rotation[0]<<'|'<<o.transform.rotation[1]<<'|'<<o.transform.rotation[2]<<'|'<<o.transform.scale[0]<<'|'<<o.transform.scale[1]<<'|'<<o.transform.scale[2]<<'|'<<o.assetPath.generic_string()<<"\n";for(auto& n:o.script.nodes)out<<"NODE|"<<o.id<<'|'<<n.id<<'|'<<n.type<<'|'<<n.title<<'|'<<n.x<<'|'<<n.y<<"\n";}}
 
     fs::path root;std::vector<SceneObject> objects;std::vector<fs::path> assets;std::uint64_t selectedId=0,nextId=1,nextNodeId=1,nextPinId=1,deleteNodeId=0,pendingPin=0;bool pendingPinIsOutput=false;ViewportRenderer renderer;ApiCatalog api;NodeRegistry nodes;ImGuizmo::OPERATION gizmoOp=ImGuizmo::TRANSLATE;XMFLOAT3 editorTarget{0,0,0};float editorYaw=35,editorPitch=25,editorDistance=12;ImVec2 graphPan{20,20};char assetSearch[128]{};char apiSearch[160]{};char nodeSearch[96]{};bool onlyAdapters=false;
 };
@@ -546,15 +545,15 @@ private:
 } // namespace
 
 int WINAPI wWinMain(HINSTANCE hInstance,HINSTANCE,PWSTR,int){
-    WNDCLASSEXW wc{sizeof(wc),CS_CLASSDC,wndProc,0,0,hInstance,nullptr,nullptr,nullptr,nullptr,L"CnCGZHStudioV2",nullptr};RegisterClassExW(&wc);
-    g_hwnd=CreateWindowW(wc.lpszClassName,L"CnCGZH Studio v2 — Editor visual",WS_OVERLAPPEDWINDOW,100,80,1680,980,nullptr,nullptr,wc.hInstance,nullptr);
+    WNDCLASSEXW wc{sizeof(wc),CS_CLASSDC,wndProc,0,0,hInstance,nullptr,nullptr,nullptr,nullptr,L"CnCGZHStudio",nullptr};RegisterClassExW(&wc);
+    g_hwnd=CreateWindowW(wc.lpszClassName,L"CnCGZH Studio — Editor visual",WS_OVERLAPPEDWINDOW,100,80,1680,980,nullptr,nullptr,wc.hInstance,nullptr);
     if(!createDevice(g_hwnd)){UnregisterClassW(wc.lpszClassName,wc.hInstance);return 1;}
     ShowWindow(g_hwnd,SW_SHOWDEFAULT);UpdateWindow(g_hwnd);
 
-    IMGUI_CHECKVERSION();ImGui::CreateContext();ImGuiIO& io=ImGui::GetIO();io.ConfigFlags|=ImGuiConfigFlags_NavEnableKeyboard|ImGuiConfigFlags_DockingEnable;io.IniFilename="CnCGZHStudioV2.ini";ImGui::StyleColorsDark();ImGuiStyle& style=ImGui::GetStyle();style.WindowRounding=5;style.FrameRounding=4;style.TabRounding=4;
+    IMGUI_CHECKVERSION();ImGui::CreateContext();ImGuiIO& io=ImGui::GetIO();io.ConfigFlags|=ImGuiConfigFlags_NavEnableKeyboard|ImGuiConfigFlags_DockingEnable;io.IniFilename="CnCGZHStudio.ini";ImGui::StyleColorsDark();ImGuiStyle& style=ImGui::GetStyle();style.WindowRounding=5;style.FrameRounding=4;style.TabRounding=4;
     ImGui_ImplWin32_Init(g_hwnd);ImGui_ImplDX11_Init(g_device,g_context);
 
-    StudioApp app(findProjectRoot());if(!app.initialize()){MessageBoxW(g_hwnd,L"No se pudo inicializar el renderer del viewport.",L"CnCGZH Studio v2",MB_ICONERROR);}
+    StudioApp app(findProjectRoot());if(!app.initialize()){MessageBoxW(g_hwnd,L"No se pudo inicializar el renderer del viewport.",L"CnCGZH Studio",MB_ICONERROR);}
     bool done=false;while(!done){MSG msg;while(PeekMessage(&msg,nullptr,0,0,PM_REMOVE)){TranslateMessage(&msg);DispatchMessage(&msg);if(msg.message==WM_QUIT)done=true;}if(done)break;ImGui_ImplDX11_NewFrame();ImGui_ImplWin32_NewFrame();ImGui::NewFrame();ImGuizmo::BeginFrame();app.frame();ImGui::Render();const float clear[4]{.07f,.075f,.085f,1};g_context->OMSetRenderTargets(1,&g_mainRTV,nullptr);g_context->ClearRenderTargetView(g_mainRTV,clear);ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());g_swapChain->Present(1,0);}
 
     ImGui_ImplDX11_Shutdown();ImGui_ImplWin32_Shutdown();ImGui::DestroyContext();destroyDevice();DestroyWindow(g_hwnd);UnregisterClassW(wc.lpszClassName,wc.hInstance);return 0;
