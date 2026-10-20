@@ -33,12 +33,12 @@ add_library(cncgzh_imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
     ${imgui_SOURCE_DIR}/backends/imgui_impl_dx11.cpp
-    ${imguizmo_SOURCE_DIR}/ImGuizmo.cpp
+    ${imguizmo_SOURCE_DIR}/src/ImGuizmo.cpp
 )
 target_include_directories(cncgzh_imgui PUBLIC
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
-    ${imguizmo_SOURCE_DIR}
+    ${imguizmo_SOURCE_DIR}/src
 )
 target_compile_definitions(cncgzh_imgui PUBLIC IMGUI_DEFINE_MATH_OPERATORS NOMINMAX WIN32_LEAN_AND_MEAN)
 target_compile_options(cncgzh_imgui PRIVATE /utf-8)
